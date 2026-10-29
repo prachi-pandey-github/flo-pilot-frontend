@@ -3,6 +3,19 @@
 This workflow uses Groq to draft one personalized plain-text email per client
 and Resend to deliver it. It can be run as a CLI or as a FastAPI service.
 
+## Frontend authentication
+
+The static frontend uses Supabase Auth for email/password signup, login,
+session persistence, and logout. In the Supabase dashboard, add each deployed
+frontend URL under **Authentication → URL Configuration → Redirect URLs**:
+
+- `https://imaginative-lolly-b1c60c.netlify.app/login.html`
+- Your Vercel deployment URL with `/login.html`, if you use one
+
+If **Confirm email** is enabled under **Authentication → Providers → Email**,
+new users must click the confirmation link before logging in. The frontend
+uses the Supabase publishable key; never put a service-role key in the browser.
+
 ## Setup
 
 1. Copy `clients.example.json` to `clients.json` and replace the sample data.

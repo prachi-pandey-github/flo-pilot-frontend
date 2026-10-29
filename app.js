@@ -1,5 +1,8 @@
 const KEY = 'flowpilot-demo';
 const API_BASE = 'https://flo-backend-3t89.onrender.com';
+const SUPABASE_URL = 'https://bkhthwzdgbezcczuvutf.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Q1udrIe1uI5ZzFmuKP0cQg_T92VlOGX';
+let supabaseClient;
 const defaultState = {
   user: { name: 'Avery Morgan', email: 'avery@northstarops.com', role: 'Operations lead' },
   business: { name: 'Northstar Operations', industry: 'B2B services', size: '11-50' },
@@ -42,10 +45,10 @@ function services() { return shell('services', `<div class="hero-band"><div><p c
 function leads() { return shell('leads', `<div class="page-head"><div><p class="eyebrow">Lead intelligence</p><h1>Leads & campaign</h1><p class="lede">Every conversation is classified before it becomes a task, a quote, or a follow-up.</p></div></div><div class="grid grid-3 stats"><div class="card stat"><span class="eyebrow">High intent</span><span class="stat-value">48</span><span class="stat-meta">${icon('priority_high')} 8 need a reply</span></div><div class="card stat"><span class="eyebrow">In review</span><span class="stat-value">19</span><span class="stat-meta">${icon('visibility')} Human check</span></div><div class="card stat"><span class="eyebrow">Avg. response time</span><span class="stat-value">2.4h</span><span class="stat-meta">${icon('trending_down')} 31% faster</span></div></div><section class="card"><div class="section-head" style="margin-top:0"><div><h2>Priority conversations</h2><p class="lede">Sorted by intent and recency.</p></div><span class="chip blue">Campaign synced 2m ago</span></div><div class="list"><div class="list-row"><div class="row-main"><span class="row-icon">${icon('mark_email_unread')}</span><div><p class="row-title">Pricing request · Koru Labs</p><p class="row-sub">“Could you send implementation pricing by Friday?”</p></div></div><div><span class="chip live">High intent</span></div></div><div class="list-row"><div class="row-main"><span class="row-icon">${icon('question_answer')}</span><div><p class="row-title">Product question · Helio Systems</p><p class="row-sub">Needs technical context before a quote.</p></div></div><div><span class="chip blue">Needs context</span></div></div><div class="list-row"><div class="row-main"><span class="row-icon">${icon('thumb_up')}</span><div><p class="row-title">Positive reply · Northwind</p><p class="row-sub">Asked to see the next available onboarding slot.</p></div></div><div><span class="chip live">Warm</span></div></div></div></section>`); }
 function campaign() { return shell('campaign', `<div class="page-head"><div><p class="eyebrow">Momentum engine</p><h1>Followups that feel human.</h1><p class="lede">Automate the next thoughtful touch without losing visibility or control.</p></div><button class="btn lime" data-action="queue-followup">${icon('add_task')} Schedule follow-up</button></div><div class="grid grid-3 stats"><div class="card stat"><span class="eyebrow">Queued today</span><span class="stat-value">${state.followups}</span><span class="stat-meta">${icon('schedule')} 9 due before noon</span></div><div class="card stat"><span class="eyebrow">Open rate</span><span class="stat-value">61%</span><span class="stat-meta">${icon('trending_up')} +7.4% this month</span></div><div class="card stat"><span class="eyebrow">Replies recovered</span><span class="stat-value">84</span><span class="stat-meta">${icon('reply')} From automated nudges</span></div></div><div class="grid grid-2"><section class="card"><div class="section-head" style="margin-top:0"><h2>Upcoming sequence</h2><span class="chip live">● Running</span></div><div class="list"><div class="list-row"><div class="row-main"><span class="row-icon">${icon('schedule_send')}</span><div><p class="row-title">Horizon Studio · check-in</p><p class="row-sub">Today, 3:40 PM · Email 2 of 3</p></div></div><span class="chip blue">Review</span></div><div class="list-row"><div class="row-main"><span class="row-icon">${icon('schedule_send')}</span><div><p class="row-title">Ridgeway · proposal nudge</p><p class="row-sub">Tomorrow, 9:15 AM · Email 1 of 2</p></div></div><span class="chip">Scheduled</span></div><div class="list-row"><div class="row-main"><span class="row-icon">${icon('pause_circle')}</span><div><p class="row-title">Atlas Health · paused</p><p class="row-sub">Reply detected · sequence stopped</p></div></div><span class="chip live">Protected</span></div></div></section><section class="card"><h2>Automation rules</h2><div class="list"><div class="list-row"><span>Wait 2 business days</span><span class="chip">Timing</span></div><div class="list-row"><span>Stop when a reply lands</span><span class="chip live">Guardrail</span></div><div class="list-row"><span>Escalate high intent</span><span class="chip blue">Smart rule</span></div></div><button class="btn ghost" data-action="save-rule" style="margin-top:14px">${icon('add')} Add automation rule</button></section></div>`); }
 function analytics() { return shell('analytics', `<div class="page-head"><div><p class="eyebrow">Service intelligence</p><h1>Know what is working.</h1><p class="lede">A clear view of the time saved, pipeline created, and attention still needed.</p></div><button class="btn ghost" data-action="export-report">${icon('download')} Export report</button></div><div class="grid grid-4 stats"><div class="card stat"><span class="eyebrow">Time saved</span><span class="stat-value">42h</span><span class="stat-meta">${icon('trending_up')} +12h vs last month</span></div><div class="card stat"><span class="eyebrow">Pipeline influenced</span><span class="stat-value">$184k</span><span class="stat-meta">${icon('auto_graph')} 31 opportunities</span></div><div class="card stat"><span class="eyebrow">Automation ROI</span><span class="stat-value">4.8x</span><span class="stat-meta">${icon('paid')} On subscription</span></div><div class="card stat"><span class="eyebrow">Data confidence</span><span class="stat-value">94%</span><span class="stat-meta">${icon('verified')} Across services</span></div></div><div class="grid grid-2"><section class="card"><div class="section-head" style="margin-top:0"><h2>Weekly activity</h2><span class="chip blue">Last 7 days</span></div><div class="list"><div class="list-row"><span class="row-main">${icon('mark_email_read')} Emails classified</span><strong>342</strong></div><div class="progress"><span style="width:88%"></span></div><div class="list-row"><span class="row-main">${icon('request_quote')} Quotes generated</span><strong>18</strong></div><div class="progress"><span style="width:46%;background:var(--coral)"></span></div><div class="list-row"><span class="row-main">${icon('schedule_send')} Follow-ups completed</span><strong>96</strong></div><div class="progress"><span style="width:67%;background:var(--lime-deep)"></span></div></div></section><section class="card"><h2>Service health</h2><div class="list"><div class="list-row"><span class="row-main"><span class="row-icon">${icon('mark_email_read')}</span>Email classification</span><span class="chip live">Healthy</span></div><div class="list-row"><span class="row-main"><span class="row-icon">${icon('document_scanner')}</span>Document extraction</span><span class="chip live">Healthy</span></div><div class="list-row"><span class="row-main"><span class="row-icon">${icon('schedule_send')}</span>Automated followups</span><span class="chip blue">12 queued</span></div></div></section></div><section class="card" style="margin-top:16px"><div class="section-head" style="margin-top:0"><h2>Recent impact</h2><span class="chip">Updated just now</span></div><div class="table-wrap"><table><thead><tr><th>Service</th><th>Outcome</th><th>Confidence</th><th>Status</th></tr></thead><tbody><tr><td>Email classification</td><td>8 high-intent replies surfaced</td><td>97%</td><td><span class="chip live">Actioned</span></td></tr><tr><td>Quote generation</td><td>6 drafts awaiting review</td><td>91%</td><td><span class="chip blue">In review</span></td></tr><tr><td>Document extraction</td><td>12 renewal fields captured</td><td>96%</td><td><span class="chip live">Complete</span></td></tr></tbody></table></div></section>`); }
-function profile() { return shell('profile', `<div class="page-head"><div><p class="eyebrow">Account</p><h1>Profile & business</h1><p class="lede">Keep the workspace context current so every generated email, quote, and follow-up sounds like your team.</p></div><span class="chip live">● Local demo workspace</span></div><div class="grid grid-2"><section class="card"><div class="section-head" style="margin-top:0"><h2>Personal details</h2><span class="avatar">${initials(state.user.name)}</span></div><form data-action="save-profile" class="form-grid"><div class="field"><label>Full name</label><input name="name" value="${esc(state.user.name)}" required /></div><div class="field"><label>Work email</label><input name="email" type="email" value="${esc(state.user.email)}" required /></div><div class="field full"><label>Role</label><input name="role" value="${esc(state.user.role)}" /></div><div class="field full"><button class="btn primary" type="submit">${icon('save')} Save personal details</button></div></form></section><section class="card"><div class="section-head" style="margin-top:0"><h2>Business account</h2><span class="chip blue">Team plan</span></div><form data-action="save-business" class="form-grid"><div class="field full"><label>Business name</label><input name="name" value="${esc(state.business.name)}" required /></div><div class="field"><label>Industry</label><input name="industry" value="${esc(state.business.industry)}" /></div><div class="field"><label>Team size</label><select name="size"><option ${state.business.size === '1-10' ? 'selected' : ''}>1-10</option><option ${state.business.size === '11-50' ? 'selected' : ''}>11-50</option><option ${state.business.size === '51-200' ? 'selected' : ''}>51-200</option></select></div><div class="field full"><button class="btn lime" type="submit">${icon('domain')} Save business account</button></div></form></section></div><section class="card" style="margin-top:16px"><div class="section-head" style="margin-top:0"><div><h2>Workspace access</h2><p class="lede">Authentication is simulated locally for this front-end prototype.</p></div><button class="btn ghost" data-action="logout">${icon('logout')} Log out</button></div><div class="notice">${icon('shield')} Your profile details stay in this browser until you clear site data. Connect these forms to your auth API when the backend is ready.</div></section>`); }
-function auth() { return `<div class="auth-page"><section class="auth-visual"><a class="brand" href="login.html" style="color:#fff"><span class="brand-mark">✦</span> flowpilot</a><div><p class="eyebrow" style="color:var(--lime)">The calm layer for client work</p><h1>Move from inbox noise to meaningful next steps.</h1><p>Flowpilot brings intelligence to the moments your team repeats every day, so the work feels lighter without becoming less human.</p></div><div class="auth-points"><div class="auth-point">${icon('check_circle')} Classify every message by intent</div><div class="auth-point">${icon('check_circle')} Turn briefs into ready-to-review quotes</div><div class="auth-point">${icon('check_circle')} Keep follow-ups moving automatically</div></div></section><section class="auth-panel"><div class="auth-card"><p class="eyebrow">Welcome to flowpilot</p><h2 id="auth-title">Sign in to your workspace</h2><p class="lede" id="auth-copy">Use the demo account or create a new business workspace.</p><div class="tabs"><button class="tab active" data-tab="login">Log in</button><button class="tab" data-tab="signup">Create account</button></div><form id="login-form" data-action="login"><div class="field"><label>Email</label><input type="email" name="email" value="avery@northstarops.com" required /></div><div class="field" style="margin-top:14px"><label>Password</label><input type="password" name="password" value="demo123" required /></div><button class="btn primary" type="submit" style="width:100%;margin-top:20px">${icon('login')} Log in</button></form><form id="signup-form" class="hidden" data-action="signup"><div class="field"><label>Your name</label><input name="name" placeholder="Avery Morgan" required /></div><div class="field" style="margin-top:14px"><label>Work email</label><input name="email" type="email" placeholder="you@company.com" required /></div><div class="field" style="margin-top:14px"><label>Business name</label><input name="business" placeholder="Northstar Operations" required /></div><div class="field" style="margin-top:14px"><label>Create password</label><input name="password" type="password" minlength="6" required /></div><button class="btn lime" type="submit" style="width:100%;margin-top:20px">${icon('rocket_launch')} Create business account</button></form><p style="margin:18px 0 0;color:var(--muted);font-size:11px">Demo only · No credentials leave this browser.</p></div></section></div>`; }
+function profile() { return shell('profile', `<div class="page-head"><div><p class="eyebrow">Account</p><h1>Profile & business</h1><p class="lede">Keep the workspace context current so every generated email, quote, and follow-up sounds like your team.</p></div><span class="chip live">● Supabase account</span></div><div class="grid grid-2"><section class="card"><div class="section-head" style="margin-top:0"><h2>Personal details</h2><span class="avatar">${initials(state.user.name)}</span></div><form data-action="save-profile" class="form-grid"><div class="field"><label>Full name</label><input name="name" value="${esc(state.user.name)}" required /></div><div class="field"><label>Work email</label><input name="email" type="email" value="${esc(state.user.email)}" required /></div><div class="field full"><label>Role</label><input name="role" value="${esc(state.user.role)}" /></div><div class="field full"><button class="btn primary" type="submit">${icon('save')} Save personal details</button></div></form></section><section class="card"><div class="section-head" style="margin-top:0"><h2>Business account</h2><span class="chip blue">Team plan</span></div><form data-action="save-business" class="form-grid"><div class="field full"><label>Business name</label><input name="name" value="${esc(state.business.name)}" required /></div><div class="field"><label>Industry</label><input name="industry" value="${esc(state.business.industry)}" /></div><div class="field"><label>Team size</label><select name="size"><option ${state.business.size === '1-10' ? 'selected' : ''}>1-10</option><option ${state.business.size === '11-50' ? 'selected' : ''}>11-50</option><option ${state.business.size === '51-200' ? 'selected' : ''}>51-200</option></select></div><div class="field full"><button class="btn lime" type="submit">${icon('domain')} Save business account</button></div></form></section></div><section class="card" style="margin-top:16px"><div class="section-head" style="margin-top:0"><div><h2>Workspace access</h2><p class="lede">Your account is authenticated with Supabase.</p></div><button class="btn ghost" data-action="logout">${icon('logout')} Log out</button></div><div class="notice">${icon('shield')} Your session is securely persisted by Supabase in this browser.</div></section>`); }
+function auth() { return `<div class="auth-page"><section class="auth-visual"><a class="brand" href="login.html" style="color:#fff"><span class="brand-mark">✦</span> flowpilot</a><div><p class="eyebrow" style="color:var(--lime)">The calm layer for client work</p><h1>Move from inbox noise to meaningful next steps.</h1><p>Flowpilot brings intelligence to the moments your team repeats every day, so the work feels lighter without becoming less human.</p></div><div class="auth-points"><div class="auth-point">${icon('check_circle')} Classify every message by intent</div><div class="auth-point">${icon('check_circle')} Turn briefs into ready-to-review quotes</div><div class="auth-point">${icon('check_circle')} Keep follow-ups moving automatically</div></div></section><section class="auth-panel"><div class="auth-card"><p class="eyebrow">Welcome to flowpilot</p><h2 id="auth-title">Sign in to your workspace</h2><p class="lede" id="auth-copy">Use your email and password to access your workspace.</p><div class="tabs"><button class="tab active" data-tab="login">Log in</button><button class="tab" data-tab="signup">Create account</button></div><div id="auth-result"></div><form id="login-form" data-action="login"><div class="field"><label>Email</label><input type="email" name="email" autocomplete="email" required /></div><div class="field" style="margin-top:14px"><label>Password</label><input type="password" name="password" autocomplete="current-password" required /></div><button class="btn primary" type="submit" style="width:100%;margin-top:20px">${icon('login')} Log in</button></form><form id="signup-form" class="hidden" data-action="signup"><div class="field"><label>Your name</label><input name="name" autocomplete="name" placeholder="Avery Morgan" required /></div><div class="field" style="margin-top:14px"><label>Work email</label><input name="email" type="email" autocomplete="email" placeholder="you@company.com" required /></div><div class="field" style="margin-top:14px"><label>Business name</label><input name="business" placeholder="Northstar Operations" required /></div><div class="field" style="margin-top:14px"><label>Create password</label><input name="password" type="password" autocomplete="new-password" minlength="6" required /></div><button class="btn lime" type="submit" style="width:100%;margin-top:20px">${icon('rocket_launch')} Create business account</button></form><p style="margin:18px 0 0;color:var(--muted);font-size:11px">Your account is securely managed by Supabase.</p></div></section></div>`; }
 function bind() {
-  document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-tab]').forEach(item => item.classList.remove('active')); button.classList.add('active'); const login = button.dataset.tab === 'login'; document.getElementById('login-form')?.classList.toggle('hidden', !login); document.getElementById('signup-form')?.classList.toggle('hidden', login); document.getElementById('auth-title').textContent = login ? 'Sign in to your workspace' : 'Create your business workspace'; document.getElementById('auth-copy').textContent = login ? 'Use the demo account or create a new business workspace.' : 'Set up your team context once, then let the workspace do the repetitive work.'; }));
+  document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-tab]').forEach(item => item.classList.remove('active')); button.classList.add('active'); const login = button.dataset.tab === 'login'; document.getElementById('login-form')?.classList.toggle('hidden', !login); document.getElementById('signup-form')?.classList.toggle('hidden', login); document.getElementById('auth-title').textContent = login ? 'Sign in to your workspace' : 'Create your business workspace'; document.getElementById('auth-copy').textContent = login ? 'Use your email and password to access your workspace.' : 'Create a secure account for your workspace.'; }));
   document.querySelectorAll('[data-compose-tab]').forEach(button => button.addEventListener('click', () => { document.querySelectorAll('[data-compose-tab]').forEach(item => item.classList.remove('active')); button.classList.add('active'); const ai = button.dataset.composeTab === 'ai'; document.getElementById('manual-email-form')?.classList.toggle('hidden', ai); document.getElementById('ai-email-form')?.classList.toggle('hidden', !ai); }));
   document.querySelectorAll('[data-action]').forEach(element => element.addEventListener('click', handleAction));
   document.querySelectorAll('form[data-action]').forEach(form => form.addEventListener('submit', handleAction));
@@ -64,6 +67,10 @@ function showEmailResult(message, success = false) {
   const result = document.getElementById('new-mail-result');
   if (result) result.innerHTML = `<div class="notice ${success ? 'success' : 'warn'}" style="margin-top:14px">${icon(success ? 'check_circle' : 'error')}<span>${message}</span></div>`;
 }
+function showAuthResult(message, success = false) {
+  const result = document.getElementById('auth-result');
+  if (result) result.innerHTML = `<div class="notice ${success ? 'success' : 'warn'}" style="margin:14px 0">${icon(success ? 'check_circle' : 'error')}<span>${esc(message)}</span></div>`;
+}
 function setBusy(button, busy, label) {
   if (!button) return;
   button.disabled = busy;
@@ -79,9 +86,45 @@ async function handleAction(event) {
   if (event.type === 'submit') event.preventDefault();
   const action = event.currentTarget.dataset.action;
   const form = event.currentTarget;
-  if (action === 'login') { state.loggedIn = true; save(); window.location.href = 'dashboard.html'; }
-  if (action === 'signup') { const data = Object.fromEntries(new FormData(form)); state.loggedIn = true; state.user = { name: data.name, email: data.email, role: 'Workspace owner' }; state.business = { name: data.business, industry: 'New business', size: '1-10' }; save(); window.location.href = 'profile.html'; }
-  if (action === 'logout') { state.loggedIn = false; save(); window.location.href = 'login.html'; }
+  if (action === 'login' || action === 'signup') {
+    const data = Object.fromEntries(new FormData(form));
+    const button = form.querySelector('button[type="submit"]');
+    setBusy(button, true, action === 'login' ? 'Logging in...' : 'Creating account...');
+    try {
+      const result = action === 'login'
+        ? await supabaseClient.auth.signInWithPassword({ email: data.email, password: data.password })
+        : await supabaseClient.auth.signUp({
+            email: data.email,
+            password: data.password,
+            options: { data: { name: data.name, business: data.business }, emailRedirectTo: `${window.location.origin}/login.html` }
+          });
+      if (result.error) throw result.error;
+      if (action === 'signup' && !result.data.session) {
+        showAuthResult('Account created. Check your email to confirm your account, then log in.', true);
+        form.reset();
+      } else {
+        state.loggedIn = true;
+        state.user = { ...state.user, name: result.data.user.user_metadata?.name || data.name || state.user.name, email: result.data.user.email };
+        if (action === 'signup') state.business = { ...state.business, name: data.business || state.business.name };
+        save();
+        window.location.href = action === 'login' ? 'dashboard.html' : 'profile.html';
+      }
+    } catch (error) {
+      showAuthResult(error.message || 'Authentication failed. Please try again.');
+    } finally {
+      setBusy(button, false);
+    }
+  }
+  if (action === 'logout') {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+      toast(error.message || 'Could not log out');
+      return;
+    }
+    state.loggedIn = false;
+    save();
+    window.location.href = 'login.html';
+  }
   if (action === 'save-profile') { const data = Object.fromEntries(new FormData(form)); state.user = { ...state.user, ...data }; save(); toast('Personal details saved'); render(); }
   if (action === 'save-business') { const data = Object.fromEntries(new FormData(form)); state.business = { ...state.business, ...data }; save(); toast('Business account updated'); render(); }
   if (action === 'toggle-compose') { const composer = document.getElementById('new-mail'); composer.classList.toggle('hidden'); if (!composer.classList.contains('hidden')) composer.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
@@ -130,5 +173,49 @@ async function handleAction(event) {
   if (action === 'save-rule') toast('Automation rule added to the sequence');
   if (action === 'export-report') toast('Report prepared for download');
 }
-function render() { const page = document.body.dataset.page; if (page === 'landing') document.body.innerHTML = landing(); else if (page === 'auth') document.body.innerHTML = auth(); else if (!state.loggedIn) window.location.href = 'login.html'; else { const views = { dashboard, services, inbox, leads, campaign, analytics, profile }; document.body.innerHTML = views[page](); } bind(); }
-render();
+function loadSupabase() {
+  return new Promise((resolve, reject) => {
+    if (window.supabase) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Could not load Supabase. Check your connection and try again.'));
+    document.head.appendChild(script);
+  });
+}
+async function render() {
+  const page = document.body.dataset.page;
+  if (page !== 'landing') {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    state.loggedIn = Boolean(data.session);
+    if (data.session?.user) {
+      state.user = {
+        ...state.user,
+        name: data.session.user.user_metadata?.name || state.user.name,
+        email: data.session.user.email || state.user.email
+      };
+      save();
+    }
+  }
+  if (page === 'landing') document.body.innerHTML = landing();
+  else if (page === 'auth' && state.loggedIn) window.location.href = 'dashboard.html';
+  else if (page === 'auth') document.body.innerHTML = auth();
+  else if (!state.loggedIn) window.location.href = 'login.html';
+  else {
+    const views = { dashboard, services, inbox, leads, campaign, analytics, profile };
+    document.body.innerHTML = views[page]();
+  }
+  bind();
+}
+loadSupabase()
+  .then(() => {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    return render();
+  })
+  .catch(error => {
+    document.body.innerHTML = `<div class="notice warn" style="margin:24px">${icon('error')}<span>${esc(error.message)}</span></div>`;
+  });
