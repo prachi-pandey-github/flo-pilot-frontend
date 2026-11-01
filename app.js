@@ -64,8 +64,21 @@ function bind() {
   document.querySelectorAll('[data-action]').forEach(element => element.addEventListener('click', handleAction));
   document.querySelectorAll('form[data-action]').forEach(form => form.addEventListener('submit', handleAction));
 }
-async function requestEmail(payload) {
-  const response = await fetch(`${API_BASE}/campaigns`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+async function filesToAttachments(files) {
+  return Promise.all(Array.from(files || []).map(file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({
+      filename: file.name,
+      content: String(reader.result).split(',')[1] || '',
+      content_type: file.type || 'application/octet-stream'
+    });
+    reader.onerror = () => reject(new Error(`Could not read attachment "${file.name}"`));
+    reader.readAsDataURL(file);
+  })));
+}
+async function requestEmail(payload, files = []) {
+  const attachments = files.length ? await filesToAttachments(files) : (payload.attachments || []);
+  const response = await fetch(`${API_BASE}/campaigns`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, attachments }) });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const detail = Array.isArray(body.detail) ? body.detail.map(item => item.msg).join(', ') : body.detail;
@@ -167,10 +180,11 @@ async function handleAction(event) {
   if (action === 'generate-ai-email') {
     const data = Object.fromEntries(new FormData(form));
     const button = form.querySelector('button[type="submit"]');
+    const files = form.querySelector('[name="attachments"]')?.files || [];
     const payload = { clients: [{ email: data.recipient, name: data.name, company: data.company || '', context: data.context || '' }], campaign_goal: data.prompt, dry_run: true };
     setBusy(button, true, 'Generating...');
     try {
-      const result = await requestEmail(payload);
+      const result = await requestEmail(payload, files);
       form.dataset.emailPayload = JSON.stringify(payload);
       document.getElementById('ai-email-subject').value = result.subject || '';
       document.getElementById('ai-email-output').value = result.body || '';
@@ -182,7 +196,27 @@ async function handleAction(event) {
       setBusy(button, false);
     }
   }
-  if (action === 'send-email') { const data = Object.fromEntries(new FormData(form)); const attachments = Array.from(form.querySelector('[name="attachments"]')?.files || []).map(file => file.name); const attachmentText = attachments.length ? `<br>Attachments: ${esc(attachments.join(', '))}` : ''; const result = document.getElementById('new-mail-result'); result.innerHTML = '<div class="notice success" style="margin-top:14px">' + icon('check_circle') + '<span><strong>Email ready to send</strong><br>To: ' + esc(data.recipient || 'your selected recipient') + attachmentText + '<br>Your email has been prepared for sending.</span></div>'; }
+  if (action === 'send-email') {
+    const data = Object.fromEntries(new FormData(form));
+    const files = form.querySelector('[name="attachments"]')?.files || [];
+    const button = form.querySelector('button[type="submit"]');
+    const payload = {
+      clients: [{ email: data.recipient, name: data.recipient, company: '', context: data.message }],
+      campaign_goal: data.subject,
+      dry_run: false,
+      attachments: await filesToAttachments(files)
+    };
+    setBusy(button, true, 'Sending...');
+    try {
+      const result = await requestEmail(payload);
+      const attachmentText = files.length ? `<br>Attachments: ${esc(Array.from(files).map(file => file.name).join(', '))}` : '';
+      document.getElementById('new-mail-result').innerHTML = `<div class="notice success" style="margin-top:14px">${icon('check_circle')}<span><strong>Email sent successfully</strong><br>To: ${esc(result.to || data.recipient)}${attachmentText}<br>Message ID: ${esc(result.message_id || 'confirmed by email service')}</span></div>`;
+    } catch (error) {
+      showEmailResult(`<strong>Could not send the email</strong><br>${esc(error.message)}`);
+    } finally {
+      setBusy(button, false);
+    }
+  }
   if (action === 'send-ai-email') {
     const aiForm = form.closest('form');
     const payload = aiForm && aiForm.dataset.emailPayload ? JSON.parse(aiForm.dataset.emailPayload) : null;
@@ -193,7 +227,8 @@ async function handleAction(event) {
     const button = form;
     setBusy(button, true, 'Sending...');
     try {
-      const result = await requestEmail({ ...payload, dry_run: false });
+      const files = aiForm.querySelector('[name="attachments"]')?.files || [];
+      const result = await requestEmail({ ...payload, dry_run: false }, files);
       state.emails += 1;
       save();
       const attachments = Array.from(aiForm.querySelector('[name="attachments"]')?.files || []).map(file => file.name);
